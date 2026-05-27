@@ -269,7 +269,7 @@ export default function Step3({ state, update, onNext, onBack }: Props) {
 
             <div>
               <label className="label-text">
-                一致していたこと（OHBYと価値観が重なっていた部分）
+                一致していたこと（職業興味カードと価値観が重なっていた部分）
               </label>
               <textarea
                 rows={3}
@@ -295,7 +295,7 @@ export default function Step3({ state, update, onNext, onBack }: Props) {
 
             <div>
               <label className="label-text font-extrabold text-indigo-700">
-                自分のRIASECタイプ × 価値観の「交差点」を一言で表すと？
+                自分の職業興味のタイプ × 価値観の「交差点」を一言で表すと？
               </label>
               <textarea
                 rows={2}

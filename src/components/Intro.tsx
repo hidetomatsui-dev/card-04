@@ -8,7 +8,7 @@ interface Props {
 }
 
 const features = [
-  { icon: '🃏', label: 'Step 1', title: '興味の可視化', desc: '48枚の職業カードを仕分けてRIASECタイプを特定' },
+  { icon: '🃏', label: 'Step 1', title: '興味の可視化', desc: '48枚の職業興味カードを仕分けて職業興味のタイプを特定' },
   { icon: '💎', label: 'Step 2', title: '動機の深掘り', desc: '60枚の価値観カードから自分の核心を3つに絞る' },
   { icon: '🗺️', label: 'Step 3', title: '統合と納得',   desc: '興味×価値観のマトリクスで「働き方のレシピ」を言語化' },
   { icon: '🚀', label: 'Step 4', title: '行動への橋渡し', desc: '24時間以内のスモールステップを設定する' },

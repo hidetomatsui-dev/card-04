@@ -299,7 +299,7 @@ export default function Step1({ state, update, onNext, onBack }: Props) {
 
           {/* RIASEC Chart */}
           <div className="card-base p-6">
-            <h3 className="section-title">RIASECタイプ集計</h3>
+            <h3 className="section-title">職業興味のタイプ集計</h3>
             <RIASECChart counts={counts} />
 
             {/* RIASEC checkboxes */}
@@ -371,7 +371,7 @@ export default function Step1({ state, update, onNext, onBack }: Props) {
 
             <div>
               <label className="label-text">
-                そのタイプ（RIASEC）に惹かれる背景・理由は？（過去の経験や得意だったことから）
+                その職業興味のタイプに惹かれる背景・理由は？（過去の経験や得意だったことから）
               </label>
               <textarea
                 rows={3}

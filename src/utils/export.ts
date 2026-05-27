@@ -35,7 +35,7 @@ export function generatePlainText(state: AppState): string {
   }
   lines.push('');
 
-  lines.push('■ RIASECタイプ集計:');
+  lines.push('■ 職業興味のタイプ集計:');
   const counts: Record<RIASECType, number> = { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
   interestedIds.forEach(id => {
     const card = ohbyCards.find(c => c.id === id);
@@ -87,7 +87,7 @@ export function generatePlainText(state: AppState): string {
   lines.push('【Step 3】 統合と納得（Alignment）');
   lines.push(sub);
 
-  lines.push('■ マイ・統合マトリクス（価値観 × RIASECタイプ）:');
+  lines.push('■ マイ・統合マトリクス（価値観 × 職業興味のタイプ）:');
   if (top3Ids.length > 0) {
     top3Ids.forEach(vid => {
       const vCard = valueCards.find(c => c.id === vid);
@@ -104,7 +104,7 @@ export function generatePlainText(state: AppState): string {
   }
   lines.push('');
 
-  lines.push('■ 一致していたこと（OHBYと価値観が重なった部分）:');
+  lines.push('■ 一致していたこと（職業興味カードと価値観が重なった部分）:');
   lines.push(state.step3Alignment1 ? `  ${state.step3Alignment1}` : '  （未記入）');
   lines.push('');
 

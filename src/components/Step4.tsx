@@ -45,7 +45,7 @@ export default function Step4({ state, update, onBack }: Props) {
           <div className="space-y-2 text-sm">
             {state.riasecChecked.length > 0 && (
               <p className="text-gray-700">
-                <span className="font-bold">RIASECタイプ: </span>
+                <span className="font-bold">職業興味のタイプ: </span>
                 {state.riasecChecked.join('型・')}型
               </p>
             )}
