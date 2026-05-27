@@ -269,7 +269,7 @@ export default function Step3({ state, update, onNext, onBack }: Props) {
 
             <div>
               <label className="label-text">
-                一致していたこと（職業興味カードと価値観が重なっていた部分）
+                一致していたこと（職業興味と価値観が重なっていた部分）
               </label>
               <textarea
                 rows={3}

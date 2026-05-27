@@ -104,7 +104,7 @@ export function generatePlainText(state: AppState): string {
   }
   lines.push('');
 
-  lines.push('■ 一致していたこと（職業興味カードと価値観が重なった部分）:');
+  lines.push('■ 一致していたこと（職業興味と価値観が重なった部分）:');
   lines.push(state.step3Alignment1 ? `  ${state.step3Alignment1}` : '  （未記入）');
   lines.push('');
 
