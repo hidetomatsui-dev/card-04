@@ -1,8 +1,7 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import type { AppState } from '../types';
+import { useEffect, useCallback } from 'react';
+import { motion, useMotionValue, useTransform, animate, AnimatePresence } from 'framer-motion';
+import type { AppState, ValueSortResult } from '../types';
 import { valueCards } from '../data/valueCards';
-import type { ValueCard } from '../types';
 
 interface Props {
   state: AppState;
@@ -11,94 +10,128 @@ interface Props {
   onBack: () => void;
 }
 
-type Phase = 1 | 2 | 3;
+// ─── Draggable Value Card ─────────────────────────────────────
+interface ValueDragCardProps {
+  keyword: string;
+  onSort: (result: ValueSortResult) => void;
+}
 
-const PHASE_TARGET = [5, 3, 1];
-const PHASE_LABEL  = ['5枚', '3枚', '1枚（TOP1）'];
+function ValueDragCard({ keyword, onSort }: ValueDragCardProps) {
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const rotate = useTransform(x, [-200, 200], [-22, 22]);
+  const importantOpacity    = useTransform(x, [20, 100], [0, 1]);
+  const notImportantOpacity = useTransform(x, [-100, -20], [1, 0]);
+  const neutralOpacity      = useTransform(y, [20, 100], [0, 1]);
 
-function ValueCardButton({
-  card,
-  isSelected,
-  onToggle,
-  disabled,
-  highlight,
-}: {
-  card: ValueCard;
-  isSelected: boolean;
-  onToggle: () => void;
-  disabled: boolean;
-  highlight?: boolean;
-}) {
+  const handleDragEnd = useCallback(
+    (_: PointerEvent, info: { offset: { x: number; y: number }; velocity: { x: number; y: number } }) => {
+      const { offset, velocity } = info;
+      const swipeRight = offset.x > 80 || (offset.x > 40 && velocity.x > 400);
+      const swipeLeft  = offset.x < -80 || (offset.x < -40 && velocity.x < -400);
+      const swipeDown  = offset.y > 80 || (offset.y > 40 && velocity.y > 400);
+
+      if (swipeRight) {
+        animate(x, 700, { duration: 0.35, ease: 'easeOut', onComplete: () => onSort('important') });
+        animate(y, -30, { duration: 0.35 });
+      } else if (swipeLeft) {
+        animate(x, -700, { duration: 0.35, ease: 'easeOut', onComplete: () => onSort('not-important') });
+        animate(y, -30, { duration: 0.35 });
+      } else if (swipeDown) {
+        animate(y, 700, { duration: 0.35, ease: 'easeOut', onComplete: () => onSort('neutral') });
+      }
+    },
+    [x, y, onSort]
+  );
+
   return (
-    <motion.button
-      onClick={onToggle}
-      disabled={disabled && !isSelected}
-      layout
-      className={`relative p-3 rounded-xl border-2 text-center transition-all duration-150 select-none ${
-        isSelected
-          ? 'border-indigo-500 bg-indigo-50 shadow-md'
-          : disabled
-          ? 'border-gray-100 bg-gray-50 opacity-40 cursor-not-allowed'
-          : 'border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/50 cursor-pointer'
-      } ${highlight ? 'ring-2 ring-amber-400' : ''}`}
-      whileTap={!disabled || isSelected ? { scale: 0.95 } : {}}
+    <motion.div
+      style={{ x, y, rotate }}
+      drag
+      dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+      dragElastic={0.75}
+      whileDrag={{ scale: 1.04, zIndex: 50 }}
+      onDragEnd={handleDragEnd}
+      initial={{ scale: 1, opacity: 1 }}
+      className="drag-card absolute touch-none select-none"
     >
-      {isSelected && (
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-indigo-600 rounded-full flex items-center justify-center"
-        >
-          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-          </svg>
-        </motion.div>
-      )}
-      <span className={`text-sm font-bold block mb-1 ${isSelected ? 'text-indigo-700' : 'text-gray-700'}`}>
-        {card.keyword}
-      </span>
-      <span className={`text-[10px] px-1.5 py-0.5 rounded-full border ${card.categoryColor}`}>
-        {card.categoryName.split('・').slice(-1)[0]}
-      </span>
-    </motion.button>
+      {/* Direction overlays */}
+      <motion.div
+        style={{ opacity: importantOpacity }}
+        className="absolute top-5 left-5 z-10 bg-green-500 text-white text-sm font-black px-3 py-1.5 rounded-xl border-2 border-green-600 rotate-[-8deg] pointer-events-none"
+      >
+        大切 ✓
+      </motion.div>
+      <motion.div
+        style={{ opacity: notImportantOpacity }}
+        className="absolute top-5 right-5 z-10 bg-red-500 text-white text-sm font-black px-3 py-1.5 rounded-xl border-2 border-red-600 rotate-[8deg] pointer-events-none"
+      >
+        大切でない ✕
+      </motion.div>
+      <motion.div
+        style={{ opacity: neutralOpacity }}
+        className="absolute bottom-5 left-1/2 -translate-x-1/2 z-10 bg-gray-500 text-white text-sm font-black px-3 py-1.5 rounded-xl border-2 border-gray-600 pointer-events-none"
+      >
+        どちらでもない …
+      </motion.div>
+
+      {/* Card face — keyword only, no category */}
+      <div className="w-72 h-96 sm:w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 flex flex-col items-center justify-center p-8">
+        <p className="text-3xl font-extrabold text-gray-800 text-center leading-tight">{keyword}</p>
+      </div>
+    </motion.div>
   );
 }
 
+// ─── Main Step2 ───────────────────────────────────────────────
 export default function Step2({ state, update, onNext, onBack }: Props) {
-  const [phase, setPhase] = useState<Phase>(() => {
-    if (state.phase3Selected !== null) return 3;
-    if (state.phase2Selected.length > 0) return 2;
-    return 1;
-  });
+  const sorted   = state.valueSortResults;
+  const cardOrder = state.valueCardOrder.length > 0 ? state.valueCardOrder : valueCards.map(c => c.id);
+  const total    = valueCards.length;
+  const sortedCount = Object.keys(sorted).length;
+  const isDone   = sortedCount >= total;
 
-  const p1 = state.phase1Selected;
+  const unsortedIds   = cardOrder.filter(id => sorted[id] === undefined);
+  const currentCard   = unsortedIds.length > 0 ? valueCards.find(c => c.id === unsortedIds[0]) : undefined;
+  const nextCard      = unsortedIds.length > 1 ? valueCards.find(c => c.id === unsortedIds[1]) : undefined;
+  const nextCard2     = unsortedIds.length > 2 ? valueCards.find(c => c.id === unsortedIds[2]) : undefined;
+
+  const importantCards = valueCards.filter(c => sorted[c.id] === 'important');
   const p2 = state.phase2Selected;
   const p3 = state.phase3Selected;
   const episodes = state.valueEpisodes;
 
-  const target = PHASE_TARGET[phase - 1];
-  const canProceed1 = p1.length === PHASE_TARGET[0];
-  const canProceed2 = p2.length === PHASE_TARGET[1];
-  const canProceed3 = p3 !== null;
+  const progressPct = (sortedCount / total) * 100;
 
-  const toggleP1 = (id: number) => {
-    if (p1.includes(id)) {
-      update({ phase1Selected: p1.filter(x => x !== id) });
-    } else if (p1.length < PHASE_TARGET[0]) {
-      update({ phase1Selected: [...p1, id] });
-    }
-  };
+  const handleSort = useCallback(
+    (result: ValueSortResult) => {
+      if (!currentCard) return;
+      update({ valueSortResults: { ...sorted, [currentCard.id]: result } });
+    },
+    [currentCard, sorted, update]
+  );
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    if (isDone) return;
+    const handler = (e: KeyboardEvent) => {
+      if (['ArrowRight', 'ArrowLeft', 'ArrowDown'].includes(e.key)) {
+        e.preventDefault();
+        if (e.key === 'ArrowRight') handleSort('important');
+        if (e.key === 'ArrowLeft')  handleSort('not-important');
+        if (e.key === 'ArrowDown')  handleSort('neutral');
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [isDone, handleSort]);
 
   const toggleP2 = (id: number) => {
     if (p2.includes(id)) {
       update({ phase2Selected: p2.filter(x => x !== id) });
-    } else if (p2.length < PHASE_TARGET[1]) {
+    } else if (p2.length < 3) {
       update({ phase2Selected: [...p2, id] });
     }
-  };
-
-  const selectP3 = (id: number) => {
-    update({ phase3Selected: id });
   };
 
   const updateEpisode = (id: number, field: 'episode' | 'feeling', value: string) => {
@@ -110,17 +143,15 @@ export default function Step2({ state, update, onNext, onBack }: Props) {
     });
   };
 
-  const top3Cards   = valueCards.filter(c => p2.includes(c.id));
-  const top1Card    = valueCards.find(c => c.id === p3);
-  const phase2Cards = valueCards.filter(c => p1.includes(c.id));
-  const phase3Cards = valueCards.filter(c => p2.includes(c.id));
+  const top3Cards = valueCards.filter(c => p2.includes(c.id));
+  const top1Card  = valueCards.find(c => c.id === p3);
 
-  // Group cards by category for Phase 1
-  const grouped = valueCards.reduce<Record<string, ValueCard[]>>((acc, c) => {
-    if (!acc[c.categoryName]) acc[c.categoryName] = [];
-    acc[c.categoryName].push(c);
-    return acc;
-  }, {});
+  // Determine current UI phase
+  const uiPhase: 'sorting' | 'pick3' | 'pick1' | 'episodes' =
+    !isDone ? 'sorting'
+    : p3 !== null ? 'episodes'
+    : p2.length === 3 ? 'pick1'
+    : 'pick3';
 
   return (
     <div>
@@ -128,135 +159,206 @@ export default function Step2({ state, update, onNext, onBack }: Props) {
       <div className="flex items-center gap-3 mb-8">
         <span className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center font-black text-lg shrink-0">2</span>
         <div>
-          <h2 className="text-2xl font-extrabold text-gray-900">動機の深掘り</h2>
+          <h2 className="text-2xl font-extrabold text-gray-900">キャリアの価値観の可視化</h2>
           <p className="text-sm text-gray-500">Why — あなたが大切にしている価値観の核心を見つける</p>
         </div>
       </div>
 
       {/* Phase indicator */}
-      <div className="flex items-center gap-2 mb-6 no-print">
-        {([1, 2, 3] as Phase[]).map(p => (
-          <div key={p} className="flex items-center">
-            <div
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold transition-all ${
-                phase === p
+      <div className="flex items-center gap-2 mb-6 no-print overflow-x-auto pb-1">
+        {[
+          { key: 'sorting', label: '仕分け' },
+          { key: 'pick3',   label: '3枚選ぶ' },
+          { key: 'pick1',   label: 'TOP1' },
+          { key: 'episodes',label: '内省' },
+        ].map((ph, i, arr) => {
+          const phases = ['sorting', 'pick3', 'pick1', 'episodes'];
+          const phaseIdx = phases.indexOf(ph.key);
+          const currentIdx = phases.indexOf(uiPhase);
+          const isActive = ph.key === uiPhase;
+          const isCompleted = phaseIdx < currentIdx;
+          return (
+            <div key={ph.key} className="flex items-center shrink-0">
+              <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold transition-all ${
+                isActive
                   ? 'bg-indigo-600 text-white shadow-md'
-                  : p < phase
-                  ? 'bg-indigo-100 text-indigo-600 cursor-pointer hover:bg-indigo-200'
+                  : isCompleted
+                  ? 'bg-indigo-100 text-indigo-600'
                   : 'bg-gray-100 text-gray-400'
-              }`}
-              onClick={() => p < phase && setPhase(p)}
-            >
-              <span>{p < phase ? '✓' : p}</span>
-              <span>フェーズ{p}（{PHASE_LABEL[p - 1]}）</span>
+              }`}>
+                <span>{isCompleted ? '✓' : phaseIdx + 1}</span>
+                <span>{ph.label}</span>
+              </div>
+              {i < arr.length - 1 && <span className="mx-1 text-gray-300 shrink-0">→</span>}
             </div>
-            {p < 3 && <span className="mx-1 text-gray-300">→</span>}
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <AnimatePresence mode="wait">
-        {/* ── Phase 1: Select 5 from 60 ── */}
-        {phase === 1 && (
+
+        {/* ── Sorting phase ── */}
+        {uiPhase === 'sorting' && (
           <motion.div
-            key="phase1"
+            key="sorting"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -16 }}
             transition={{ duration: 0.25 }}
           >
-            <div className="card-base p-5 mb-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="section-title mb-0">ピンとくるカードを{PHASE_TARGET[0]}枚選んでください</h3>
-                <span className={`text-2xl font-extrabold tabular-nums transition-colors ${
-                  p1.length === target ? 'text-indigo-600' : 'text-gray-500'
-                }`}>
-                  {p1.length}/{target}
-                </span>
+            <div className="card-base p-6 mb-8">
+              {/* Progress bar */}
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-semibold text-gray-600">{sortedCount} / {total} 枚</span>
+                <span className="text-xs text-gray-400">残り {total - sortedCount} 枚</span>
               </div>
-              <p className="text-sm text-gray-500 mb-5">
-                直感で選んでOK。「なんとなくピンとくる」で十分です。
+              <div className="h-2 bg-gray-100 rounded-full mb-6 overflow-hidden">
+                <motion.div
+                  className="h-full bg-indigo-500 rounded-full"
+                  animate={{ width: `${progressPct}%` }}
+                  transition={{ duration: 0.3 }}
+                />
+              </div>
+
+              {/* Card stack */}
+              <div className="relative h-[26rem] flex items-center justify-center mb-6">
+                {nextCard2 && (
+                  <div className="absolute translate-y-4 scale-[0.88] opacity-30 pointer-events-none">
+                    <div className="w-72 sm:w-80 h-96 bg-white rounded-2xl border border-gray-200 shadow-sm" />
+                  </div>
+                )}
+                {nextCard && (
+                  <div className="absolute translate-y-2 scale-[0.94] opacity-60 pointer-events-none">
+                    <div className="w-72 sm:w-80 h-96 bg-white rounded-2xl border border-gray-200 shadow-md" />
+                  </div>
+                )}
+                {currentCard && (
+                  <ValueDragCard
+                    key={currentCard.id}
+                    keyword={currentCard.keyword}
+                    onSort={handleSort}
+                  />
+                )}
+              </div>
+
+              {/* Hint */}
+              <p className="text-center text-xs text-gray-400 mb-5">
+                左右にドラッグ、または下にスワイプ &nbsp;|&nbsp; PC: ← → ↓ キー
               </p>
 
-              {Object.entries(grouped).map(([catName, cards]) => (
-                <div key={catName} className="mb-5">
-                  <p className="text-xs font-bold text-gray-400 mb-2 uppercase tracking-wider">{catName}</p>
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-                    {cards.map(card => (
-                      <ValueCardButton
-                        key={card.id}
-                        card={card}
-                        isSelected={p1.includes(card.id)}
-                        onToggle={() => toggleP1(card.id)}
-                        disabled={p1.length >= target}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))}
+              {/* Action buttons */}
+              <div className="grid grid-cols-3 gap-3">
+                <button
+                  onClick={() => handleSort('not-important')}
+                  className="flex flex-col items-center gap-1 py-4 rounded-2xl bg-red-50 border-2 border-red-200 text-red-600 font-bold hover:bg-red-100 active:scale-95 transition-all"
+                >
+                  <span className="text-2xl">👈</span>
+                  <span className="text-xs">大切でない</span>
+                </button>
+                <button
+                  onClick={() => handleSort('neutral')}
+                  className="flex flex-col items-center gap-1 py-4 rounded-2xl bg-gray-50 border-2 border-gray-200 text-gray-500 font-bold hover:bg-gray-100 active:scale-95 transition-all"
+                >
+                  <span className="text-2xl">👇</span>
+                  <span className="text-xs">どちらでもない</span>
+                </button>
+                <button
+                  onClick={() => handleSort('important')}
+                  className="flex flex-col items-center gap-1 py-4 rounded-2xl bg-green-50 border-2 border-green-200 text-green-600 font-bold hover:bg-green-100 active:scale-95 transition-all"
+                >
+                  <span className="text-2xl">👉</span>
+                  <span className="text-xs">大切</span>
+                </button>
+              </div>
+
+              {/* Undo */}
+              {sortedCount > 0 && (
+                <button
+                  onClick={() => {
+                    const lastSortedId = [...cardOrder].reverse().find(id => sorted[id] !== undefined);
+                    if (lastSortedId) {
+                      const newResults = { ...sorted };
+                      delete newResults[lastSortedId];
+                      update({ valueSortResults: newResults });
+                    }
+                  }}
+                  className="mt-4 w-full text-xs text-gray-400 hover:text-gray-600 transition-colors py-2"
+                >
+                  ← 1枚戻す
+                </button>
+              )}
             </div>
 
             <div className="flex justify-between items-center no-print">
               <button onClick={onBack} className="btn-secondary">← 戻る</button>
-              <button
-                onClick={() => setPhase(2)}
-                disabled={!canProceed1}
-                className="btn-primary"
-              >
-                フェーズ2へ（{p1.length}/{target}枚選択中）
-              </button>
             </div>
           </motion.div>
         )}
 
-        {/* ── Phase 2: Select 3 from 5 ── */}
-        {phase === 2 && (
+        {/* ── Pick 3 phase ── */}
+        {uiPhase === 'pick3' && (
           <motion.div
-            key="phase2"
+            key="pick3"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -16 }}
             transition={{ duration: 0.25 }}
           >
+            {/* Completion banner */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="card-base p-6 bg-gradient-to-r from-indigo-50 to-violet-50 border-indigo-100 text-center mb-6"
+            >
+              <div className="text-4xl mb-3">🎉</div>
+              <h3 className="text-xl font-extrabold text-indigo-700 mb-1">仕分け完了！</h3>
+              <p className="text-sm text-gray-600">
+                「大切」カード: <strong className="text-indigo-700">{importantCards.length}枚</strong>
+              </p>
+            </motion.div>
+
             <div className="card-base p-5 mb-5">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="section-title mb-0">さらに大切なものを{PHASE_TARGET[1]}枚に絞ってください</h3>
+                <h3 className="section-title mb-0">「大切」カードから3枚に絞ってください</h3>
                 <span className={`text-2xl font-extrabold tabular-nums transition-colors ${
-                  p2.length === PHASE_TARGET[1] ? 'text-indigo-600' : 'text-gray-500'
+                  p2.length === 3 ? 'text-indigo-600' : 'text-gray-500'
                 }`}>
-                  {p2.length}/{PHASE_TARGET[1]}
+                  {p2.length}/3
                 </span>
               </div>
               <p className="text-sm text-gray-500 mb-5">
-                フェーズ1で選んだ5枚から、さらに「本当に大切なもの」を3枚選んでください。
+                「大切」に仕分けたカードの中から、特に大切な3枚を選んでください。
               </p>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {phase2Cards.map(card => (
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                {importantCards.map(card => (
                   <motion.button
                     key={card.id}
                     layout
                     onClick={() => toggleP2(card.id)}
-                    disabled={p2.length >= PHASE_TARGET[1] && !p2.includes(card.id)}
-                    className={`relative p-5 rounded-2xl border-2 text-center transition-all ${
+                    disabled={p2.length >= 3 && !p2.includes(card.id)}
+                    className={`relative p-3 rounded-xl border-2 text-center transition-all duration-150 select-none ${
                       p2.includes(card.id)
-                        ? 'border-indigo-500 bg-indigo-50 shadow-lg scale-[1.02]'
-                        : p2.length >= PHASE_TARGET[1]
-                        ? 'border-gray-100 opacity-50 cursor-not-allowed'
-                        : 'border-gray-200 bg-white hover:border-indigo-300 cursor-pointer'
+                        ? 'border-indigo-500 bg-indigo-50 shadow-md'
+                        : p2.length >= 3
+                        ? 'border-gray-100 bg-gray-50 opacity-40 cursor-not-allowed'
+                        : 'border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/50 cursor-pointer'
                     }`}
-                    whileTap={{ scale: 0.96 }}
+                    whileTap={p2.length < 3 || p2.includes(card.id) ? { scale: 0.95 } : {}}
                   >
                     {p2.includes(card.id) && (
-                      <div className="absolute -top-2 -right-2 w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center">
-                        <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-indigo-600 rounded-full flex items-center justify-center"
+                      >
+                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                         </svg>
-                      </div>
+                      </motion.div>
                     )}
-                    <span className="text-xl font-extrabold text-gray-800 block mb-2">{card.keyword}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full border ${card.categoryColor}`}>
-                      {card.categoryName}
+                    <span className={`text-sm font-bold block ${p2.includes(card.id) ? 'text-indigo-700' : 'text-gray-700'}`}>
+                      {card.keyword}
                     </span>
                   </motion.button>
                 ))}
@@ -264,22 +366,28 @@ export default function Step2({ state, update, onNext, onBack }: Props) {
             </div>
 
             <div className="flex justify-between items-center no-print">
-              <button onClick={() => setPhase(1)} className="btn-secondary">← フェーズ1に戻る</button>
               <button
-                onClick={() => setPhase(3)}
-                disabled={!canProceed2}
-                className="btn-primary"
+                onClick={() => update({ valueSortResults: {} })}
+                className="btn-secondary"
               >
-                フェーズ3へ（{p2.length}/{PHASE_TARGET[1]}枚選択中）
+                ← 仕分けに戻る
+              </button>
+              <button
+                onClick={() => {/* uiPhase auto-advances when p2.length===3 */}}
+                disabled={p2.length < 3}
+                className="btn-primary"
+                style={{ display: p2.length < 3 ? 'inline-flex' : 'none' }}
+              >
+                TOP1を選ぶ（{p2.length}/3枚選択中）
               </button>
             </div>
           </motion.div>
         )}
 
-        {/* ── Phase 3: Select 1 TOP ── */}
-        {phase === 3 && (
+        {/* ── Pick TOP1 phase ── */}
+        {uiPhase === 'pick1' && (
           <motion.div
-            key="phase3"
+            key="pick1"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -16 }}
@@ -287,36 +395,33 @@ export default function Step2({ state, update, onNext, onBack }: Props) {
           >
             <div className="card-base p-5 mb-5">
               <h3 className="section-title">究極の1枚（TOP1）を選んでください</h3>
-              <p className="text-sm text-gray-500 mb-5">
+              <p className="text-sm text-gray-500 mb-6">
                 3枚の中で、あなたの人生の核心にある「最も大切な1つ」を選んでください。
               </p>
 
               <div className="grid grid-cols-3 gap-4 mb-6">
-                {phase3Cards.map(card => (
+                {top3Cards.map(card => (
                   <motion.button
                     key={card.id}
-                    onClick={() => selectP3(card.id)}
-                    className={`relative p-6 rounded-2xl border-3 text-center transition-all ${
+                    onClick={() => update({ phase3Selected: card.id })}
+                    className={`relative p-6 rounded-2xl text-center transition-all cursor-pointer ${
                       p3 === card.id
                         ? 'border-amber-500 bg-amber-50 shadow-xl scale-[1.05]'
-                        : 'border-gray-200 bg-white hover:border-amber-300 cursor-pointer shadow-md'
+                        : 'border-gray-200 bg-white hover:border-amber-300 shadow-md'
                     }`}
-                    style={{ borderWidth: p3 === card.id ? 3 : 2 }}
+                    style={{ borderWidth: p3 === card.id ? 3 : 2, borderStyle: 'solid' }}
                     whileTap={{ scale: 0.95 }}
                   >
                     {p3 === card.id && (
                       <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-xs font-black px-3 py-1 rounded-full"
+                        className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-xs font-black px-3 py-1 rounded-full whitespace-nowrap"
                       >
                         ★ TOP 1
                       </motion.div>
                     )}
-                    <span className="text-2xl font-extrabold text-gray-800 block mb-2">{card.keyword}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full border ${card.categoryColor}`}>
-                      {card.categoryName}
-                    </span>
+                    <span className="text-2xl font-extrabold text-gray-800 block">{card.keyword}</span>
                   </motion.button>
                 ))}
               </div>
@@ -329,6 +434,42 @@ export default function Step2({ state, update, onNext, onBack }: Props) {
                 </div>
               )}
             </div>
+
+            <div className="flex justify-between items-center no-print">
+              <button
+                onClick={() => update({ phase2Selected: [], phase3Selected: null })}
+                className="btn-secondary"
+              >
+                ← 3枚選びに戻る
+              </button>
+              <button
+                disabled={p3 === null}
+                onClick={() => {/* uiPhase auto-advances when p3 !== null */}}
+                className="btn-primary"
+                style={{ display: p3 === null ? 'inline-flex' : 'none' }}
+              >
+                次へ
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* ── Episodes + reflection phase ── */}
+        {uiPhase === 'episodes' && (
+          <motion.div
+            key="episodes"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -16 }}
+            transition={{ duration: 0.25 }}
+          >
+            {/* TOP1 summary */}
+            {top1Card && (
+              <div className="card-base p-4 mb-5 bg-amber-50 border-amber-200 text-center">
+                <p className="text-xs font-semibold text-amber-600 mb-1">あなたのTOP1価値観</p>
+                <p className="text-2xl font-extrabold text-amber-800">「{top1Card.keyword}」</p>
+              </div>
+            )}
 
             {/* Episode forms for TOP3 */}
             {top3Cards.length > 0 && (
@@ -343,9 +484,6 @@ export default function Step2({ state, update, onNext, onBack }: Props) {
                             TOP1
                           </span>
                         )}
-                        <span className={`text-xs px-2 py-0.5 rounded-full border ${card.categoryColor}`}>
-                          {card.categoryName}
-                        </span>
                         <span className="font-extrabold text-gray-800">「{card.keyword}」</span>
                         <span className="text-sm text-gray-400">（第{i + 1}位）</span>
                       </div>
@@ -394,18 +532,40 @@ export default function Step2({ state, update, onNext, onBack }: Props) {
             </div>
 
             <div className="flex justify-between items-center no-print">
-              <button onClick={() => setPhase(2)} className="btn-secondary">← フェーズ2に戻る</button>
               <button
-                onClick={onNext}
-                disabled={!canProceed3}
-                className="btn-primary"
+                onClick={() => update({ phase3Selected: null })}
+                className="btn-secondary"
               >
+                ← TOP1選択に戻る
+              </button>
+              <button onClick={onNext} className="btn-primary">
                 Step 3 へ →
               </button>
             </div>
           </motion.div>
         )}
+
       </AnimatePresence>
+
+      {/* Reset sorting button */}
+      {isDone && uiPhase !== 'sorting' && (
+        <div className="mt-4 text-center no-print">
+          <button
+            onClick={() => {
+              if (confirm('仕分け結果をリセットしますか？')) {
+                update({
+                  valueSortResults: {},
+                  phase2Selected: [],
+                  phase3Selected: null,
+                });
+              }
+            }}
+            className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+          >
+            仕分けをやり直す
+          </button>
+        </div>
+      )}
     </div>
   );
 }

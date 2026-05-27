@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { AppState } from './types';
+import { ohbyCards } from './data/ohbyCards';
+import { valueCards } from './data/valueCards';
 import ProgressBar from './components/ProgressBar';
 import Intro from './components/Intro';
 import Step1 from './components/Step1';
@@ -11,13 +13,25 @@ import ExportPanel from './components/ExportPanel';
 
 const STORAGE_KEY = 'career-workshop-v1';
 
+function shuffle(arr: number[]): number[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 const defaultState: AppState = {
   name: '',
   currentStep: 0,
+  cardOrder: [],
   cardSortResults: {},
   riasecChecked: [],
   step1Reflection1: '',
   step1Reflection2: '',
+  valueCardOrder: [],
+  valueSortResults: {},
   phase1Selected: [],
   phase2Selected: [],
   phase3Selected: null,
@@ -35,9 +49,25 @@ const defaultState: AppState = {
 function loadState(): AppState {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) return { ...defaultState, ...JSON.parse(saved) };
+    const parsed = saved ? JSON.parse(saved) : {};
+    return {
+      ...defaultState,
+      ...parsed,
+      cardOrder:
+        Array.isArray(parsed.cardOrder) && parsed.cardOrder.length > 0
+          ? parsed.cardOrder
+          : shuffle(ohbyCards.map(c => c.id)),
+      valueCardOrder:
+        Array.isArray(parsed.valueCardOrder) && parsed.valueCardOrder.length > 0
+          ? parsed.valueCardOrder
+          : shuffle(valueCards.map(c => c.id)),
+    };
   } catch { /* ignore */ }
-  return defaultState;
+  return {
+    ...defaultState,
+    cardOrder: shuffle(ohbyCards.map(c => c.id)),
+    valueCardOrder: shuffle(valueCards.map(c => c.id)),
+  };
 }
 
 const pageVariants = {
@@ -92,7 +122,6 @@ export default function App() {
 
       {state.currentStep === 4 && <ExportPanel state={state} />}
 
-      {/* Print header (only shown when printing) */}
       <div className="hidden print-only fixed top-0 left-0 right-0 p-4 border-b border-gray-300">
         <h1 className="text-lg font-bold">キャリアの軸ワークショップ　提出用ワークシート</h1>
         <p className="text-sm text-gray-600">

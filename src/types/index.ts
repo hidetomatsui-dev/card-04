@@ -1,5 +1,6 @@
 export type RIASECType = 'R' | 'I' | 'A' | 'S' | 'E' | 'C';
 export type SortResult = 'interested' | 'neutral' | 'not-interested';
+export type ValueSortResult = 'important' | 'neutral' | 'not-important';
 
 export type SchwartzCategory =
   | 'autonomy'
@@ -39,13 +40,16 @@ export interface AppState {
   currentStep: number;
 
   // Step 1
+  cardOrder: number[];
   cardSortResults: Record<number, SortResult>;
   riasecChecked: RIASECType[];
   step1Reflection1: string;
   step1Reflection2: string;
 
   // Step 2
-  phase1Selected: number[];
+  valueCardOrder: number[];
+  valueSortResults: Record<number, ValueSortResult>;
+  phase1Selected: number[];   // legacy (unused)
   phase2Selected: number[];
   phase3Selected: number | null;
   valueEpisodes: Record<number, ValueEpisode>;

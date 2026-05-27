@@ -2,8 +2,8 @@ import { motion } from 'framer-motion';
 
 const STEPS = [
   { label: 'Intro', short: '導入' },
-  { label: 'Step 1', short: '興味の可視化' },
-  { label: 'Step 2', short: '動機の深掘り' },
+  { label: 'Step 1', short: '職業興味の可視化' },
+  { label: 'Step 2', short: 'キャリアの価値観の可視化' },
   { label: 'Step 3', short: '統合と納得' },
   { label: 'Step 4', short: '行動へ' },
 ];

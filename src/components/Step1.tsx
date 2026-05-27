@@ -126,8 +126,10 @@ export default function Step1({ state, update, onNext, onBack }: Props) {
   const total = ohbyCards.length;
   const isDone = sortedCount >= total;
 
-  // Current card is the first unsorted one
-  const currentCard = ohbyCards.find(c => sorted[c.id] === undefined);
+  // Use shuffled cardOrder; fall back to static order for legacy data
+  const cardOrder = state.cardOrder.length > 0 ? state.cardOrder : ohbyCards.map(c => c.id);
+  const unsortedIds = cardOrder.filter(id => sorted[id] === undefined);
+  const currentCard = unsortedIds.length > 0 ? ohbyCards.find(c => c.id === unsortedIds[0]) : undefined;
 
   const handleSort = useCallback(
     (result: SortResult) => {
@@ -179,9 +181,9 @@ export default function Step1({ state, update, onNext, onBack }: Props) {
     update({ riasecChecked: checked });
   };
 
-  // Stack background cards
-  const nextCard  = ohbyCards.find(c => sorted[c.id] === undefined && c !== currentCard);
-  const nextCard2 = ohbyCards.find(c => sorted[c.id] === undefined && c !== currentCard && c !== nextCard);
+  // Stack background cards (from shuffled order)
+  const nextCard  = unsortedIds.length > 1 ? ohbyCards.find(c => c.id === unsortedIds[1]) : undefined;
+  const nextCard2 = unsortedIds.length > 2 ? ohbyCards.find(c => c.id === unsortedIds[2]) : undefined;
   const stackRef  = useRef<typeof currentCard>(currentCard);
   stackRef.current = currentCard;
 
@@ -191,7 +193,7 @@ export default function Step1({ state, update, onNext, onBack }: Props) {
       <div className="flex items-center gap-3 mb-8">
         <span className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center font-black text-lg shrink-0">1</span>
         <div>
-          <h2 className="text-2xl font-extrabold text-gray-900">興味の可視化</h2>
+          <h2 className="text-2xl font-extrabold text-gray-900">職業興味の可視化</h2>
           <p className="text-sm text-gray-500">What — あなたが惹かれる仕事の世界を見つける</p>
         </div>
       </div>
@@ -270,10 +272,12 @@ export default function Step1({ state, update, onNext, onBack }: Props) {
           {sortedCount > 0 && (
             <button
               onClick={() => {
-                const lastCard = ohbyCards[sortedCount - 1];
-                const newResults = { ...sorted };
-                delete newResults[lastCard.id];
-                update({ cardSortResults: newResults });
+                const lastSortedId = [...cardOrder].reverse().find(id => sorted[id] !== undefined);
+                if (lastSortedId) {
+                  const newResults = { ...sorted };
+                  delete newResults[lastSortedId];
+                  update({ cardSortResults: newResults });
+                }
               }}
               className="mt-4 w-full text-xs text-gray-400 hover:text-gray-600 transition-colors py-2"
             >
