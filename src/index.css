@@ -1,0 +1,142 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-gradient-to-br from-slate-50 via-indigo-50 to-violet-50 min-h-screen;
+    font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+  }
+}
+
+@layer components {
+  .card-base {
+    @apply bg-white rounded-2xl shadow-md border border-gray-100;
+  }
+
+  .btn-primary {
+    @apply px-6 py-3 bg-indigo-600 text-white font-semibold rounded-xl
+           hover:bg-indigo-700 active:scale-95 transition-all duration-150
+           disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100;
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 bg-white text-gray-700 font-semibold rounded-xl border border-gray-200
+           hover:bg-gray-50 active:scale-95 transition-all duration-150;
+  }
+
+  .btn-danger {
+    @apply px-6 py-3 bg-red-500 text-white font-semibold rounded-xl
+           hover:bg-red-600 active:scale-95 transition-all duration-150;
+  }
+
+  .section-title {
+    @apply text-xl font-bold text-gray-800 mb-4;
+  }
+
+  .label-text {
+    @apply text-sm font-semibold text-gray-600 mb-1.5 block;
+  }
+
+  .textarea-base {
+    @apply w-full rounded-xl border border-gray-200 px-4 py-3 text-gray-800
+           text-sm leading-relaxed resize-none
+           focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400
+           placeholder:text-gray-400 transition-colors;
+  }
+
+  .input-base {
+    @apply w-full rounded-xl border border-gray-200 px-4 py-3 text-gray-800 text-sm
+           focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400
+           placeholder:text-gray-400 transition-colors;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  body {
+    background: white !important;
+    font-size: 11pt;
+    color: #1a1a1a;
+  }
+
+  .print-page {
+    page-break-after: always;
+  }
+
+  .print-section {
+    page-break-inside: avoid;
+    margin-bottom: 16pt;
+  }
+
+  h1, h2, h3 {
+    page-break-after: avoid;
+  }
+
+  textarea, input {
+    border: 1px solid #ccc !important;
+    background: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .card-base {
+    box-shadow: none !important;
+    border: 1px solid #ddd !important;
+  }
+
+  .print-matrix td, .print-matrix th {
+    border: 1px solid #ccc;
+    padding: 6pt;
+    font-size: 9pt;
+  }
+
+  @page {
+    size: A4;
+    margin: 15mm 15mm 20mm 15mm;
+  }
+}
+
+/* Drag card styles */
+.drag-card {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.drag-card:active {
+  cursor: grabbing;
+}
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400;
+}
