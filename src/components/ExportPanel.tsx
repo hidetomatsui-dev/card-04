@@ -9,32 +9,53 @@ interface Props {
   state: AppState;
 }
 
-async function sendAnonymousReport(state: AppState) {
-  const endpoint = import.meta.env.VITE_REPORT_ENDPOINT as string | undefined;
-  if (!endpoint) return;
+const SENT_SESSION_KEY = 'ws-anon-report-sent';
 
+async function sendAnonymousReport(state: AppState) {
+  const accessKey = import.meta.env.VITE_WEB3FORMS_KEY as string | undefined;
+  if (!accessKey) return;
+
+  // セッション中に1回だけ送信
+  if (sessionStorage.getItem(SENT_SESSION_KEY)) return;
+
+  // RIASEC カウント → 上位3タイプ
   const counts: Record<RIASECType, number> = { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
   ohbyCards.forEach(c => {
     if (state.cardSortResults[c.id] === 'interested') counts[c.type]++;
   });
   const sortedTypes = [...state.riasecChecked].sort((a, b) => counts[b] - counts[a]);
+  const riasecTop3 = sortedTypes.slice(0, 3);
 
-  const payload = {
-    timestamp: new Date().toISOString(),
-    riasecTop3: sortedTypes.slice(0, 3),
-    valueTop3: state.phase2Selected
-      .map(id => valueCards.find(c => c.id === id)?.keyword)
-      .filter(Boolean),
-    valueTop1: valueCards.find(c => c.id === state.phase3Selected)?.keyword ?? null,
-    intersection: state.step3Summary || null,
-  };
+  // 価値観 TOP3 / TOP1
+  const valueTop3 = state.phase2Selected
+    .map(id => valueCards.find(c => c.id === id)?.keyword)
+    .filter(Boolean) as string[];
+  const valueTop1 = valueCards.find(c => c.id === state.phase3Selected)?.keyword ?? '未選択';
+
+  // メール本文
+  const message = [
+    `送信日時: ${new Date().toLocaleString('ja-JP')}`,
+    '',
+    `■ 職業興味 TOP3タイプ: ${riasecTop3.length > 0 ? riasecTop3.join(' / ') : '未実施'}`,
+    `■ 価値観 TOP3キーワード: ${valueTop3.length > 0 ? valueTop3.join(' / ') : '未実施'}`,
+    `■ 価値観 TOP1: ${valueTop1}`,
+    `■ 交差点（一言）: ${state.step3Summary || '未記入'}`,
+  ].join('\n');
 
   try {
-    await fetch(endpoint, {
+    const res = await fetch('https://api.web3forms.com/submit', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({
+        access_key: accessKey,
+        subject: 'キャリアの軸ワークショップ 匿名レポート',
+        from_name: 'Career Workshop',
+        message,
+      }),
     });
+    if (res.ok) {
+      sessionStorage.setItem(SENT_SESSION_KEY, '1');
+    }
   } catch {
     // Silent fail — best-effort anonymous analytics
   }
