@@ -36,7 +36,7 @@ async function sendReport(state: AppState): Promise<'sent' | 'skipped' | 'error'
 export default function ExportPanel({ state }: Props) {
   const [copied, setCopied] = useState(false);
   const [email, setEmail] = useState('');
-  const [emailSent, setEmailSent] = useState(false);
+  const [emailStatus, setEmailStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [reportStatus, setReportStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
 
   const triggerSend = async () => {
@@ -75,15 +75,27 @@ export default function ExportPanel({ state }: Props) {
     window.print();
   };
 
-  const handleEmail = () => {
+  const handleEmail = async () => {
     const addr = email.trim();
-    if (!addr) return;
+    if (!addr || emailStatus === 'sending') return;
+
+    setEmailStatus('sending');
     const text = generatePlainText(state);
-    const subject = encodeURIComponent('キャリアの軸ワークショップ 結果レポート');
-    const body = encodeURIComponent(text);
-    window.open(`mailto:${addr}?subject=${subject}&body=${body}`, '_blank');
-    setEmailSent(true);
-    setTimeout(() => setEmailSent(false), 3000);
+    const subject = state.name
+      ? `キャリアの軸ワークショップ 結果レポート - ${state.name}`
+      : 'キャリアの軸ワークショップ 結果レポート';
+
+    try {
+      const res = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: addr, subject, message: text }),
+      });
+      setEmailStatus(res.ok ? 'sent' : 'error');
+    } catch {
+      setEmailStatus('error');
+    }
+    setTimeout(() => setEmailStatus('idle'), 4000);
     triggerSend();
   };
 
@@ -152,18 +164,30 @@ export default function ExportPanel({ state }: Props) {
             />
             <motion.button
               onClick={handleEmail}
-              disabled={!email.trim()}
+              disabled={!email.trim() || emailStatus === 'sending'}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${
-                email.trim()
-                  ? emailSent
-                    ? 'bg-green-500 text-white'
-                    : 'bg-indigo-600 text-white hover:bg-indigo-700'
-                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                !email.trim() || emailStatus === 'sending'
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : emailStatus === 'sent'
+                  ? 'bg-green-500 text-white'
+                  : emailStatus === 'error'
+                  ? 'bg-red-500 text-white'
+                  : 'bg-indigo-600 text-white hover:bg-indigo-700'
               }`}
-              whileTap={email.trim() ? { scale: 0.97 } : {}}
+              whileTap={email.trim() && emailStatus === 'idle' ? { scale: 0.97 } : {}}
             >
-              <span>{emailSent ? '✅' : '✉️'}</span>
-              <span>{emailSent ? '完了！' : '送信'}</span>
+              <span>
+                {emailStatus === 'sending' ? '⏳'
+                  : emailStatus === 'sent' ? '✅'
+                  : emailStatus === 'error' ? '❌'
+                  : '✉️'}
+              </span>
+              <span>
+                {emailStatus === 'sending' ? '送信中...'
+                  : emailStatus === 'sent' ? '送信完了！'
+                  : emailStatus === 'error' ? '送信失敗'
+                  : '送信'}
+              </span>
             </motion.button>
           </div>
           <p className="text-xs text-gray-400 mt-2">
