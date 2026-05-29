@@ -106,9 +106,12 @@ export default function Step2({ state, update, onNext, onBack }: Props) {
   const handleSort = useCallback(
     (result: ValueSortResult) => {
       if (!currentCard) return;
-      update({ valueSortResults: { ...sorted, [currentCard.id]: result } });
+      update({
+        valueSortResults: { ...sorted, [currentCard.id]: result },
+        valueSortHistory: [...state.valueSortHistory, currentCard.id],
+      });
     },
-    [currentCard, sorted, update]
+    [currentCard, sorted, state.valueSortHistory, update]
   );
 
   // Keyboard shortcuts
@@ -272,15 +275,17 @@ export default function Step2({ state, update, onNext, onBack }: Props) {
               </div>
 
               {/* Undo */}
-              {sortedCount > 0 && (
+              {state.valueSortHistory.length > 0 && (
                 <button
                   onClick={() => {
-                    const lastSortedId = [...cardOrder].reverse().find(id => sorted[id] !== undefined);
-                    if (lastSortedId) {
-                      const newResults = { ...sorted };
-                      delete newResults[lastSortedId];
-                      update({ valueSortResults: newResults });
-                    }
+                    const history = state.valueSortHistory;
+                    const lastId = history[history.length - 1];
+                    const newResults = { ...sorted };
+                    delete newResults[lastId];
+                    update({
+                      valueSortResults: newResults,
+                      valueSortHistory: history.slice(0, -1),
+                    });
                   }}
                   className="mt-4 w-full text-xs text-gray-400 hover:text-gray-600 transition-colors py-2"
                 >
@@ -555,6 +560,7 @@ export default function Step2({ state, update, onNext, onBack }: Props) {
               if (confirm('仕分け結果をリセットしますか？')) {
                 update({
                   valueSortResults: {},
+                  valueSortHistory: [],
                   phase2Selected: [],
                   phase3Selected: null,
                 });

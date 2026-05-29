@@ -135,7 +135,7 @@ export default function Step1({ state, update, onNext, onBack }: Props) {
     (result: SortResult) => {
       if (!currentCard) return;
       const newResults = { ...sorted, [currentCard.id]: result };
-      update({ cardSortResults: newResults });
+      const newHistory = [...state.sortHistory, currentCard.id];
 
       // Auto-update RIASEC checks when done
       if (Object.keys(newResults).length >= total) {
@@ -144,10 +144,12 @@ export default function Step1({ state, update, onNext, onBack }: Props) {
           if (newResults[c.id] === 'interested') counts[c.type]++;
         });
         const checked = RIASEC_TYPES.filter(t => counts[t] > 0);
-        update({ riasecChecked: checked });
+        update({ cardSortResults: newResults, sortHistory: newHistory, riasecChecked: checked });
+      } else {
+        update({ cardSortResults: newResults, sortHistory: newHistory });
       }
     },
-    [currentCard, sorted, total, update]
+    [currentCard, sorted, state.sortHistory, total, update]
   );
 
   // Keyboard shortcuts
@@ -269,15 +271,17 @@ export default function Step1({ state, update, onNext, onBack }: Props) {
           </div>
 
           {/* Undo button */}
-          {sortedCount > 0 && (
+          {state.sortHistory.length > 0 && (
             <button
               onClick={() => {
-                const lastSortedId = [...cardOrder].reverse().find(id => sorted[id] !== undefined);
-                if (lastSortedId) {
-                  const newResults = { ...sorted };
-                  delete newResults[lastSortedId];
-                  update({ cardSortResults: newResults });
-                }
+                const history = state.sortHistory;
+                const lastId = history[history.length - 1];
+                const newResults = { ...sorted };
+                delete newResults[lastId];
+                update({
+                  cardSortResults: newResults,
+                  sortHistory: history.slice(0, -1),
+                });
               }}
               className="mt-4 w-full text-xs text-gray-400 hover:text-gray-600 transition-colors py-2"
             >
@@ -401,7 +405,7 @@ export default function Step1({ state, update, onNext, onBack }: Props) {
           <button
             onClick={() => {
               if (confirm('仕分け結果をリセットしますか？')) {
-                update({ cardSortResults: {}, riasecChecked: [] });
+                update({ cardSortResults: {}, sortHistory: [], riasecChecked: [] });
               }
             }}
             className="text-xs text-gray-400 hover:text-red-500 transition-colors"

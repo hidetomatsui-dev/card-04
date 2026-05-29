@@ -27,11 +27,13 @@ const defaultState: AppState = {
   currentStep: 0,
   cardOrder: [],
   cardSortResults: {},
+  sortHistory: [],
   riasecChecked: [],
   step1Reflection1: '',
   step1Reflection2: '',
   valueCardOrder: [],
   valueSortResults: {},
+  valueSortHistory: [],
   phase1Selected: [],
   phase2Selected: [],
   phase3Selected: null,
@@ -61,6 +63,8 @@ function loadState(): AppState {
         Array.isArray(parsed.valueCardOrder) && parsed.valueCardOrder.length > 0
           ? parsed.valueCardOrder
           : shuffle(valueCards.map(c => c.id)),
+      sortHistory: Array.isArray(parsed.sortHistory) ? parsed.sortHistory : [],
+      valueSortHistory: Array.isArray(parsed.valueSortHistory) ? parsed.valueSortHistory : [],
     };
   } catch { /* ignore */ }
   return {

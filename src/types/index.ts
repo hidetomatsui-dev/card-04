@@ -42,6 +42,7 @@ export interface AppState {
   // Step 1
   cardOrder: number[];
   cardSortResults: Record<number, SortResult>;
+  sortHistory: number[];           // 仕分け順（undo用）
   riasecChecked: RIASECType[];
   step1Reflection1: string;
   step1Reflection2: string;
@@ -49,6 +50,7 @@ export interface AppState {
   // Step 2
   valueCardOrder: number[];
   valueSortResults: Record<number, ValueSortResult>;
+  valueSortHistory: number[];      // 仕分け順（undo用）
   phase1Selected: number[];   // legacy (unused)
   phase2Selected: number[];
   phase3Selected: number | null;
