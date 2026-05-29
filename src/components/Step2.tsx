@@ -96,10 +96,12 @@ export default function Step2({ state, update, onNext, onBack }: Props) {
   const nextCard      = unsortedIds.length > 1 ? valueCards.find(c => c.id === unsortedIds[1]) : undefined;
   const nextCard2     = unsortedIds.length > 2 ? valueCards.find(c => c.id === unsortedIds[2]) : undefined;
 
-  // 「大切」（neutral）と「とても大切」（important）を両方 pick3 の候補に含める
-  const candidateCards = valueCards.filter(
-    c => sorted[c.id] === 'important' || sorted[c.id] === 'neutral'
-  );
+  // 「とても大切」が3枚以上あればそれだけを候補に、2枚以下なら「大切」も含める
+  const veryImportantCards = valueCards.filter(c => sorted[c.id] === 'important');
+  const candidateCards = veryImportantCards.length >= 3
+    ? veryImportantCards
+    : valueCards.filter(c => sorted[c.id] === 'important' || sorted[c.id] === 'neutral');
+  const candidateLabel = veryImportantCards.length >= 3 ? '「とても大切」' : '「大切」「とても大切」';
   const p2 = state.phase2Selected;
   const p3 = state.phase3Selected;
   const episodes = state.valueEpisodes;
@@ -315,13 +317,13 @@ export default function Step2({ state, update, onNext, onBack }: Props) {
             <div className="text-4xl mb-3">🎉</div>
             <h3 className="text-xl font-extrabold text-indigo-700 mb-1">仕分け完了！</h3>
             <p className="text-sm text-gray-600">
-              「大切」「とても大切」カード: <strong className="text-indigo-700">{candidateCards.length}枚</strong>
+              {candidateLabel}カード: <strong className="text-indigo-700">{candidateCards.length}枚</strong>
             </p>
           </motion.div>
 
           <div className="card-base p-5 mb-5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="section-title mb-0">「大切」「とても大切」カードから3枚に絞ってください</h3>
+              <h3 className="section-title mb-0">{candidateLabel}カードから3枚に絞ってください</h3>
               <span className={`text-2xl font-extrabold tabular-nums transition-colors ${
                 p2.length === 3 ? 'text-indigo-600' : 'text-gray-500'
               }`}>
@@ -329,7 +331,7 @@ export default function Step2({ state, update, onNext, onBack }: Props) {
               </span>
             </div>
             <p className="text-sm text-gray-500 mb-5">
-              「大切」「とても大切」に仕分けたカードの中から、特に大切な3枚を選んでください。
+              {candidateLabel}に仕分けたカードの中から、特に大切な3枚を選んでください。
             </p>
 
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
