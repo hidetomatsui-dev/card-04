@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { AppState, RIASECType } from '../types';
+import type { AppState } from '../types';
 import { generatePlainText } from '../utils/export';
-import { valueCards } from '../data/valueCards';
-import { ohbyCards } from '../data/ohbyCards';
 
 interface Props {
   state: AppState;
@@ -11,36 +9,17 @@ interface Props {
 
 const SENT_SESSION_KEY = 'ws-anon-report-sent';
 
-async function sendAnonymousReport(state: AppState) {
+async function sendReport(state: AppState) {
   const accessKey = import.meta.env.VITE_WEB3FORMS_KEY as string | undefined;
   if (!accessKey) return;
 
   // セッション中に1回だけ送信
   if (sessionStorage.getItem(SENT_SESSION_KEY)) return;
 
-  // RIASEC カウント → 上位3タイプ
-  const counts: Record<RIASECType, number> = { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
-  ohbyCards.forEach(c => {
-    if (state.cardSortResults[c.id] === 'interested') counts[c.type]++;
-  });
-  const sortedTypes = [...state.riasecChecked].sort((a, b) => counts[b] - counts[a]);
-  const riasecTop3 = sortedTypes.slice(0, 3);
-
-  // 価値観 TOP3 / TOP1
-  const valueTop3 = state.phase2Selected
-    .map(id => valueCards.find(c => c.id === id)?.keyword)
-    .filter(Boolean) as string[];
-  const valueTop1 = valueCards.find(c => c.id === state.phase3Selected)?.keyword ?? '未選択';
-
-  // メール本文
-  const message = [
-    `送信日時: ${new Date().toLocaleString('ja-JP')}`,
-    '',
-    `■ 職業興味 TOP3タイプ: ${riasecTop3.length > 0 ? riasecTop3.join(' / ') : '未実施'}`,
-    `■ 価値観 TOP3キーワード: ${valueTop3.length > 0 ? valueTop3.join(' / ') : '未実施'}`,
-    `■ 価値観 TOP1: ${valueTop1}`,
-    `■ 交差点（一言）: ${state.step3Summary || '未記入'}`,
-  ].join('\n');
+  const message = generatePlainText(state);
+  const subject = state.name
+    ? `キャリアの軸ワークショップ レポート - ${state.name}`
+    : 'キャリアの軸ワークショップ レポート';
 
   try {
     const res = await fetch('https://api.web3forms.com/submit', {
@@ -48,7 +27,7 @@ async function sendAnonymousReport(state: AppState) {
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({
         access_key: accessKey,
-        subject: 'キャリアの軸ワークショップ 匿名レポート',
+        subject,
         from_name: 'Career Workshop',
         message,
       }),
@@ -57,7 +36,7 @@ async function sendAnonymousReport(state: AppState) {
       sessionStorage.setItem(SENT_SESSION_KEY, '1');
     }
   } catch {
-    // Silent fail — best-effort anonymous analytics
+    // Silent fail
   }
 }
 
@@ -80,7 +59,7 @@ export default function ExportPanel({ state }: Props) {
     }
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
-    sendAnonymousReport(state);
+    sendReport(state);
   };
 
   const handlePrint = () => {
@@ -96,7 +75,7 @@ export default function ExportPanel({ state }: Props) {
     window.open(`mailto:${addr}?subject=${subject}&body=${body}`, '_blank');
     setEmailSent(true);
     setTimeout(() => setEmailSent(false), 3000);
-    sendAnonymousReport(state);
+    sendReport(state);
   };
 
   return (
