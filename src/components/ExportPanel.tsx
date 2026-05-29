@@ -7,14 +7,9 @@ interface Props {
   state: AppState;
 }
 
-const SENT_SESSION_KEY = 'ws-anon-report-sent';
-
-async function sendReport(state: AppState) {
+async function sendReport(state: AppState): Promise<'sent' | 'skipped' | 'error'> {
   const accessKey = import.meta.env.VITE_WEB3FORMS_KEY as string | undefined;
-  if (!accessKey) return;
-
-  // セッション中に1回だけ送信
-  if (sessionStorage.getItem(SENT_SESSION_KEY)) return;
+  if (!accessKey) return 'skipped';
 
   const message = generatePlainText(state);
   const subject = state.name
@@ -32,11 +27,9 @@ async function sendReport(state: AppState) {
         message,
       }),
     });
-    if (res.ok) {
-      sessionStorage.setItem(SENT_SESSION_KEY, '1');
-    }
+    return res.ok ? 'sent' : 'error';
   } catch {
-    // Silent fail
+    return 'error';
   }
 }
 
@@ -44,6 +37,22 @@ export default function ExportPanel({ state }: Props) {
   const [copied, setCopied] = useState(false);
   const [email, setEmail] = useState('');
   const [emailSent, setEmailSent] = useState(false);
+  const [reportStatus, setReportStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+
+  const triggerSend = async () => {
+    setReportStatus('sending');
+    const result = await sendReport(state);
+    if (result === 'sent') {
+      setReportStatus('sent');
+      setTimeout(() => setReportStatus('idle'), 4000);
+    } else if (result === 'error') {
+      setReportStatus('error');
+      setTimeout(() => setReportStatus('idle'), 5000);
+    } else {
+      // 'skipped' = env var 未設定
+      setReportStatus('idle');
+    }
+  };
 
   const handleCopy = async () => {
     const text = generatePlainText(state);
@@ -59,7 +68,7 @@ export default function ExportPanel({ state }: Props) {
     }
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
-    sendReport(state);
+    triggerSend();
   };
 
   const handlePrint = () => {
@@ -75,7 +84,7 @@ export default function ExportPanel({ state }: Props) {
     window.open(`mailto:${addr}?subject=${subject}&body=${body}`, '_blank');
     setEmailSent(true);
     setTimeout(() => setEmailSent(false), 3000);
-    sendReport(state);
+    triggerSend();
   };
 
   return (
@@ -162,9 +171,44 @@ export default function ExportPanel({ state }: Props) {
           </p>
         </div>
 
+        {/* Report send status */}
         <AnimatePresence>
+          {reportStatus === 'sending' && (
+            <motion.p
+              key="sending"
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="text-center text-xs text-gray-400 mt-3"
+            >
+              集計データを送信中...
+            </motion.p>
+          )}
+          {reportStatus === 'sent' && (
+            <motion.p
+              key="sent"
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="text-center text-xs text-green-600 font-semibold mt-3"
+            >
+              ✓ 集計データを運営者に送信しました
+            </motion.p>
+          )}
+          {reportStatus === 'error' && (
+            <motion.p
+              key="error"
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="text-center text-xs text-red-500 mt-3"
+            >
+              集計データの送信に失敗しました（通信エラー）
+            </motion.p>
+          )}
           {copied && (
             <motion.p
+              key="copied"
               initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
