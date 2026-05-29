@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from 'react';
-import { motion, useMotionValue, useTransform, animate, AnimatePresence } from 'framer-motion';
+import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
 import type { AppState, ValueSortResult } from '../types';
 import { valueCards } from '../data/valueCards';
 
@@ -60,7 +60,7 @@ function ValueDragCard({ keyword, onSort }: ValueDragCardProps) {
         style={{ opacity: importantOpacity }}
         className="absolute top-5 left-5 z-10 bg-green-500 text-white text-sm font-black px-3 py-1.5 rounded-xl border-2 border-green-600 rotate-[-8deg] pointer-events-none"
       >
-        大切 ✓
+        とても大切 ✓
       </motion.div>
       <motion.div
         style={{ opacity: notImportantOpacity }}
@@ -72,7 +72,7 @@ function ValueDragCard({ keyword, onSort }: ValueDragCardProps) {
         style={{ opacity: neutralOpacity }}
         className="absolute bottom-5 left-1/2 -translate-x-1/2 z-10 bg-gray-500 text-white text-sm font-black px-3 py-1.5 rounded-xl border-2 border-gray-600 pointer-events-none"
       >
-        どちらでもない …
+        大切 …
       </motion.div>
 
       {/* Card face — keyword only, no category */}
@@ -96,7 +96,10 @@ export default function Step2({ state, update, onNext, onBack }: Props) {
   const nextCard      = unsortedIds.length > 1 ? valueCards.find(c => c.id === unsortedIds[1]) : undefined;
   const nextCard2     = unsortedIds.length > 2 ? valueCards.find(c => c.id === unsortedIds[2]) : undefined;
 
-  const importantCards = valueCards.filter(c => sorted[c.id] === 'important');
+  // 「大切」（neutral）と「とても大切」（important）を両方 pick3 の候補に含める
+  const candidateCards = valueCards.filter(
+    c => sorted[c.id] === 'important' || sorted[c.id] === 'neutral'
+  );
   const p2 = state.phase2Selected;
   const p3 = state.phase3Selected;
   const episodes = state.valueEpisodes;
@@ -198,359 +201,347 @@ export default function Step2({ state, update, onNext, onBack }: Props) {
         })}
       </div>
 
-      <AnimatePresence mode="wait">
-
-        {/* ── Sorting phase ── */}
-        {uiPhase === 'sorting' && (
-          <motion.div
-            key="sorting"
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -16 }}
-            transition={{ duration: 0.25 }}
-          >
-            <div className="card-base p-6 mb-8">
-              {/* Progress bar */}
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-semibold text-gray-600">{sortedCount} / {total} 枚</span>
-                <span className="text-xs text-gray-400">残り {total - sortedCount} 枚</span>
-              </div>
-              <div className="h-2 bg-gray-100 rounded-full mb-6 overflow-hidden">
-                <motion.div
-                  className="h-full bg-indigo-500 rounded-full"
-                  animate={{ width: `${progressPct}%` }}
-                  transition={{ duration: 0.3 }}
-                />
-              </div>
-
-              {/* Card stack */}
-              <div className="relative h-[26rem] flex items-center justify-center mb-6">
-                {nextCard2 && (
-                  <div className="absolute translate-y-4 scale-[0.88] opacity-30 pointer-events-none">
-                    <div className="w-72 sm:w-80 h-96 bg-white rounded-2xl border border-gray-200 shadow-sm" />
-                  </div>
-                )}
-                {nextCard && (
-                  <div className="absolute translate-y-2 scale-[0.94] opacity-60 pointer-events-none">
-                    <div className="w-72 sm:w-80 h-96 bg-white rounded-2xl border border-gray-200 shadow-md" />
-                  </div>
-                )}
-                {currentCard && (
-                  <ValueDragCard
-                    key={currentCard.id}
-                    keyword={currentCard.keyword}
-                    onSort={handleSort}
-                  />
-                )}
-              </div>
-
-              {/* Hint */}
-              <p className="text-center text-xs text-gray-400 mb-5">
-                左右にドラッグ、または下にスワイプ &nbsp;|&nbsp; PC: ← → ↓ キー
-              </p>
-
-              {/* Action buttons */}
-              <div className="grid grid-cols-3 gap-3">
-                <button
-                  onClick={() => handleSort('not-important')}
-                  className="flex flex-col items-center gap-1 py-4 rounded-2xl bg-red-50 border-2 border-red-200 text-red-600 font-bold hover:bg-red-100 active:scale-95 transition-all"
-                >
-                  <span className="text-2xl">👈</span>
-                  <span className="text-xs">大切でない</span>
-                </button>
-                <button
-                  onClick={() => handleSort('neutral')}
-                  className="flex flex-col items-center gap-1 py-4 rounded-2xl bg-gray-50 border-2 border-gray-200 text-gray-500 font-bold hover:bg-gray-100 active:scale-95 transition-all"
-                >
-                  <span className="text-2xl">👇</span>
-                  <span className="text-xs">どちらでもない</span>
-                </button>
-                <button
-                  onClick={() => handleSort('important')}
-                  className="flex flex-col items-center gap-1 py-4 rounded-2xl bg-green-50 border-2 border-green-200 text-green-600 font-bold hover:bg-green-100 active:scale-95 transition-all"
-                >
-                  <span className="text-2xl">👉</span>
-                  <span className="text-xs">大切</span>
-                </button>
-              </div>
-
-              {/* Undo */}
-              {state.valueSortHistory.length > 0 && (
-                <button
-                  onClick={() => {
-                    const history = state.valueSortHistory;
-                    const lastId = history[history.length - 1];
-                    const newResults = { ...sorted };
-                    delete newResults[lastId];
-                    update({
-                      valueSortResults: newResults,
-                      valueSortHistory: history.slice(0, -1),
-                    });
-                  }}
-                  className="mt-4 w-full text-xs text-gray-400 hover:text-gray-600 transition-colors py-2"
-                >
-                  ← 1枚戻す
-                </button>
-              )}
+      {/* ── Sorting phase ── */}
+      {uiPhase === 'sorting' && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.2 }}
+        >
+          <div className="card-base p-6 mb-8">
+            {/* Progress bar */}
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-semibold text-gray-600">{sortedCount} / {total} 枚</span>
+              <span className="text-xs text-gray-400">残り {total - sortedCount} 枚</span>
             </div>
-
-            <div className="flex justify-between items-center no-print">
-              <button onClick={onBack} className="btn-secondary">← 戻る</button>
-            </div>
-          </motion.div>
-        )}
-
-        {/* ── Pick 3 phase ── */}
-        {uiPhase === 'pick3' && (
-          <motion.div
-            key="pick3"
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -16 }}
-            transition={{ duration: 0.25 }}
-          >
-            {/* Completion banner */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="card-base p-6 bg-gradient-to-r from-indigo-50 to-violet-50 border-indigo-100 text-center mb-6"
-            >
-              <div className="text-4xl mb-3">🎉</div>
-              <h3 className="text-xl font-extrabold text-indigo-700 mb-1">仕分け完了！</h3>
-              <p className="text-sm text-gray-600">
-                「大切」カード: <strong className="text-indigo-700">{importantCards.length}枚</strong>
-              </p>
-            </motion.div>
-
-            <div className="card-base p-5 mb-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="section-title mb-0">「大切」カードから3枚に絞ってください</h3>
-                <span className={`text-2xl font-extrabold tabular-nums transition-colors ${
-                  p2.length === 3 ? 'text-indigo-600' : 'text-gray-500'
-                }`}>
-                  {p2.length}/3
-                </span>
-              </div>
-              <p className="text-sm text-gray-500 mb-5">
-                「大切」に仕分けたカードの中から、特に大切な3枚を選んでください。
-              </p>
-
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-                {importantCards.map(card => (
-                  <motion.button
-                    key={card.id}
-                    layout
-                    onClick={() => toggleP2(card.id)}
-                    disabled={p2.length >= 3 && !p2.includes(card.id)}
-                    className={`relative p-3 rounded-xl border-2 text-center transition-all duration-150 select-none ${
-                      p2.includes(card.id)
-                        ? 'border-indigo-500 bg-indigo-50 shadow-md'
-                        : p2.length >= 3
-                        ? 'border-gray-100 bg-gray-50 opacity-40 cursor-not-allowed'
-                        : 'border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/50 cursor-pointer'
-                    }`}
-                    whileTap={p2.length < 3 || p2.includes(card.id) ? { scale: 0.95 } : {}}
-                  >
-                    {p2.includes(card.id) && (
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-indigo-600 rounded-full flex items-center justify-center"
-                      >
-                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </motion.div>
-                    )}
-                    <span className={`text-sm font-bold block ${p2.includes(card.id) ? 'text-indigo-700' : 'text-gray-700'}`}>
-                      {card.keyword}
-                    </span>
-                  </motion.button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex justify-between items-center no-print">
-              <button
-                onClick={() => update({ valueSortResults: {} })}
-                className="btn-secondary"
-              >
-                ← 仕分けに戻る
-              </button>
-              <button
-                onClick={() => {/* uiPhase auto-advances when p2.length===3 */}}
-                disabled={p2.length < 3}
-                className="btn-primary"
-                style={{ display: p2.length < 3 ? 'inline-flex' : 'none' }}
-              >
-                TOP1を選ぶ（{p2.length}/3枚選択中）
-              </button>
-            </div>
-          </motion.div>
-        )}
-
-        {/* ── Pick TOP1 phase ── */}
-        {uiPhase === 'pick1' && (
-          <motion.div
-            key="pick1"
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -16 }}
-            transition={{ duration: 0.25 }}
-          >
-            <div className="card-base p-5 mb-5">
-              <h3 className="section-title">究極の1枚（TOP1）を選んでください</h3>
-              <p className="text-sm text-gray-500 mb-6">
-                3枚の中で、あなたの人生の核心にある「最も大切な1つ」を選んでください。
-              </p>
-
-              <div className="grid grid-cols-3 gap-4 mb-6">
-                {top3Cards.map(card => (
-                  <motion.button
-                    key={card.id}
-                    onClick={() => update({ phase3Selected: card.id })}
-                    className={`relative p-6 rounded-2xl text-center transition-all cursor-pointer ${
-                      p3 === card.id
-                        ? 'border-amber-500 bg-amber-50 shadow-xl scale-[1.05]'
-                        : 'border-gray-200 bg-white hover:border-amber-300 shadow-md'
-                    }`}
-                    style={{ borderWidth: p3 === card.id ? 3 : 2, borderStyle: 'solid' }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    {p3 === card.id && (
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-xs font-black px-3 py-1 rounded-full whitespace-nowrap"
-                      >
-                        ★ TOP 1
-                      </motion.div>
-                    )}
-                    <span className="text-2xl font-extrabold text-gray-800 block">{card.keyword}</span>
-                  </motion.button>
-                ))}
-              </div>
-
-              {top1Card && (
-                <div className="text-center p-3 bg-amber-50 rounded-xl border border-amber-200">
-                  <p className="text-sm font-bold text-amber-700">
-                    あなたのTOP1: <span className="text-lg">「{top1Card.keyword}」</span>
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-between items-center no-print">
-              <button
-                onClick={() => update({ phase2Selected: [], phase3Selected: null })}
-                className="btn-secondary"
-              >
-                ← 3枚選びに戻る
-              </button>
-              <button
-                disabled={p3 === null}
-                onClick={() => {/* uiPhase auto-advances when p3 !== null */}}
-                className="btn-primary"
-                style={{ display: p3 === null ? 'inline-flex' : 'none' }}
-              >
-                次へ
-              </button>
-            </div>
-          </motion.div>
-        )}
-
-        {/* ── Episodes + reflection phase ── */}
-        {uiPhase === 'episodes' && (
-          <motion.div
-            key="episodes"
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -16 }}
-            transition={{ duration: 0.25 }}
-          >
-            {/* TOP1 summary */}
-            {top1Card && (
-              <div className="card-base p-4 mb-5 bg-amber-50 border-amber-200 text-center">
-                <p className="text-xs font-semibold text-amber-600 mb-1">あなたのTOP1価値観</p>
-                <p className="text-2xl font-extrabold text-amber-800">「{top1Card.keyword}」</p>
-              </div>
-            )}
-
-            {/* Episode forms for TOP3 */}
-            {top3Cards.length > 0 && (
-              <div className="card-base p-5 mb-5">
-                <h3 className="section-title">TOP3の価値観について教えてください</h3>
-                <div className="space-y-6">
-                  {top3Cards.map((card, i) => (
-                    <div key={card.id} className="border border-gray-100 rounded-xl p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        {card.id === p3 && (
-                          <span className="bg-amber-500 text-white text-xs font-black px-2 py-0.5 rounded-full">
-                            TOP1
-                          </span>
-                        )}
-                        <span className="font-extrabold text-gray-800">「{card.keyword}」</span>
-                        <span className="text-sm text-gray-400">（第{i + 1}位）</span>
-                      </div>
-                      <div className="space-y-3">
-                        <div>
-                          <label className="label-text text-xs">具体的なエピソード・経験</label>
-                          <textarea
-                            rows={2}
-                            className="textarea-base"
-                            placeholder={`「${card.keyword}」を大切にした経験、感じた瞬間は？`}
-                            value={episodes[card.id]?.episode || ''}
-                            onChange={e => updateEpisode(card.id, 'episode', e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <label className="label-text text-xs">そのとき感じたこと・大切だと思ったこと</label>
-                          <textarea
-                            rows={2}
-                            className="textarea-base"
-                            placeholder="どんな気持ちでしたか？なぜ大切だと気づきましたか？"
-                            value={episodes[card.id]?.feeling || ''}
-                            onChange={e => updateEpisode(card.id, 'feeling', e.target.value)}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Reverse reflection */}
-            <div className="card-base p-5 mb-5">
-              <h3 className="section-title">「興味がない」の裏返し内省</h3>
-              <label className="label-text">
-                Step 1で「興味がない」に分類したカードを振り返って、見えてきたことはありますか？
-                <span className="text-gray-400 font-normal text-xs ml-1">（大切にしていることの裏返し）</span>
-              </label>
-              <textarea
-                rows={3}
-                className="textarea-base"
-                placeholder="例：「一人でコツコツ作業する職業」を選ばなかったのは、人と関わることへの強い欲求の表れかもしれない…"
-                value={state.step2Reflection}
-                onChange={e => update({ step2Reflection: e.target.value })}
+            <div className="h-2 bg-gray-100 rounded-full mb-6 overflow-hidden">
+              <motion.div
+                className="h-full bg-indigo-500 rounded-full"
+                animate={{ width: `${progressPct}%` }}
+                transition={{ duration: 0.3 }}
               />
             </div>
 
-            <div className="flex justify-between items-center no-print">
+            {/* Card stack */}
+            <div className="relative h-[26rem] flex items-center justify-center mb-6">
+              {nextCard2 && (
+                <div className="absolute translate-y-4 scale-[0.88] opacity-30 pointer-events-none">
+                  <div className="w-72 sm:w-80 h-96 bg-white rounded-2xl border border-gray-200 shadow-sm" />
+                </div>
+              )}
+              {nextCard && (
+                <div className="absolute translate-y-2 scale-[0.94] opacity-60 pointer-events-none">
+                  <div className="w-72 sm:w-80 h-96 bg-white rounded-2xl border border-gray-200 shadow-md" />
+                </div>
+              )}
+              {currentCard && (
+                <ValueDragCard
+                  key={currentCard.id}
+                  keyword={currentCard.keyword}
+                  onSort={handleSort}
+                />
+              )}
+            </div>
+
+            {/* Hint */}
+            <p className="text-center text-xs text-gray-400 mb-5">
+              左右にドラッグ、または下にスワイプ &nbsp;|&nbsp; PC: ← → ↓ キー
+            </p>
+
+            {/* Action buttons */}
+            <div className="grid grid-cols-3 gap-3">
               <button
-                onClick={() => update({ phase3Selected: null })}
-                className="btn-secondary"
+                onClick={() => handleSort('not-important')}
+                className="flex flex-col items-center gap-1 py-4 rounded-2xl bg-red-50 border-2 border-red-200 text-red-600 font-bold hover:bg-red-100 active:scale-95 transition-all"
               >
-                ← TOP1選択に戻る
+                <span className="text-2xl">👈</span>
+                <span className="text-xs">大切でない</span>
               </button>
-              <button onClick={onNext} className="btn-primary">
-                Step 3 へ →
+              <button
+                onClick={() => handleSort('neutral')}
+                className="flex flex-col items-center gap-1 py-4 rounded-2xl bg-gray-50 border-2 border-gray-200 text-gray-500 font-bold hover:bg-gray-100 active:scale-95 transition-all"
+              >
+                <span className="text-2xl">👇</span>
+                <span className="text-xs">大切</span>
+              </button>
+              <button
+                onClick={() => handleSort('important')}
+                className="flex flex-col items-center gap-1 py-4 rounded-2xl bg-green-50 border-2 border-green-200 text-green-600 font-bold hover:bg-green-100 active:scale-95 transition-all"
+              >
+                <span className="text-2xl">👉</span>
+                <span className="text-xs">とても大切</span>
               </button>
             </div>
-          </motion.div>
-        )}
 
-      </AnimatePresence>
+            {/* Undo */}
+            {state.valueSortHistory.length > 0 && (
+              <button
+                onClick={() => {
+                  const history = state.valueSortHistory;
+                  const lastId = history[history.length - 1];
+                  const newResults = { ...sorted };
+                  delete newResults[lastId];
+                  update({
+                    valueSortResults: newResults,
+                    valueSortHistory: history.slice(0, -1),
+                  });
+                }}
+                className="mt-4 w-full text-xs text-gray-400 hover:text-gray-600 transition-colors py-2"
+              >
+                ← 1枚戻す
+              </button>
+            )}
+          </div>
+
+          <div className="flex justify-between items-center no-print">
+            <button onClick={onBack} className="btn-secondary">← 戻る</button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* ── Pick 3 phase ── */}
+      {uiPhase === 'pick3' && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.2 }}
+        >
+          {/* Completion banner */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="card-base p-6 bg-gradient-to-r from-indigo-50 to-violet-50 border-indigo-100 text-center mb-6"
+          >
+            <div className="text-4xl mb-3">🎉</div>
+            <h3 className="text-xl font-extrabold text-indigo-700 mb-1">仕分け完了！</h3>
+            <p className="text-sm text-gray-600">
+              「大切」「とても大切」カード: <strong className="text-indigo-700">{candidateCards.length}枚</strong>
+            </p>
+          </motion.div>
+
+          <div className="card-base p-5 mb-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="section-title mb-0">「大切」「とても大切」カードから3枚に絞ってください</h3>
+              <span className={`text-2xl font-extrabold tabular-nums transition-colors ${
+                p2.length === 3 ? 'text-indigo-600' : 'text-gray-500'
+              }`}>
+                {p2.length}/3
+              </span>
+            </div>
+            <p className="text-sm text-gray-500 mb-5">
+              「大切」「とても大切」に仕分けたカードの中から、特に大切な3枚を選んでください。
+            </p>
+
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+              {candidateCards.map(card => (
+                <motion.button
+                  key={card.id}
+                  layout
+                  onClick={() => toggleP2(card.id)}
+                  disabled={p2.length >= 3 && !p2.includes(card.id)}
+                  className={`relative p-3 rounded-xl border-2 text-center transition-all duration-150 select-none ${
+                    p2.includes(card.id)
+                      ? 'border-indigo-500 bg-indigo-50 shadow-md'
+                      : p2.length >= 3
+                      ? 'border-gray-100 bg-gray-50 opacity-40 cursor-not-allowed'
+                      : 'border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/50 cursor-pointer'
+                  }`}
+                  whileTap={p2.length < 3 || p2.includes(card.id) ? { scale: 0.95 } : {}}
+                >
+                  {p2.includes(card.id) && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-indigo-600 rounded-full flex items-center justify-center"
+                    >
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </motion.div>
+                  )}
+                  <span className={`text-sm font-bold block ${p2.includes(card.id) ? 'text-indigo-700' : 'text-gray-700'}`}>
+                    {card.keyword}
+                  </span>
+                </motion.button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex justify-between items-center no-print">
+            <button
+              onClick={() => update({ valueSortResults: {}, valueSortHistory: [] })}
+              className="btn-secondary"
+            >
+              ← 仕分けに戻る
+            </button>
+            <button
+              onClick={() => {/* uiPhase auto-advances when p2.length===3 */}}
+              disabled={p2.length < 3}
+              className="btn-primary"
+              style={{ display: p2.length < 3 ? 'inline-flex' : 'none' }}
+            >
+              TOP1を選ぶ（{p2.length}/3枚選択中）
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* ── Pick TOP1 phase ── */}
+      {uiPhase === 'pick1' && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.2 }}
+        >
+          <div className="card-base p-5 mb-5">
+            <h3 className="section-title">究極の1枚（TOP1）を選んでください</h3>
+            <p className="text-sm text-gray-500 mb-6">
+              3枚の中で、あなたの人生の核心にある「最も大切な1つ」を選んでください。
+            </p>
+
+            <div className="grid grid-cols-3 gap-4 mb-6">
+              {top3Cards.map(card => (
+                <motion.button
+                  key={card.id}
+                  onClick={() => update({ phase3Selected: card.id })}
+                  className={`relative p-6 rounded-2xl text-center transition-all cursor-pointer ${
+                    p3 === card.id
+                      ? 'border-amber-500 bg-amber-50 shadow-xl scale-[1.05]'
+                      : 'border-gray-200 bg-white hover:border-amber-300 shadow-md'
+                  }`}
+                  style={{ borderWidth: p3 === card.id ? 3 : 2, borderStyle: 'solid' }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  {p3 === card.id && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-xs font-black px-3 py-1 rounded-full whitespace-nowrap"
+                    >
+                      ★ TOP 1
+                    </motion.div>
+                  )}
+                  <span className="text-2xl font-extrabold text-gray-800 block">{card.keyword}</span>
+                </motion.button>
+              ))}
+            </div>
+
+            {top1Card && (
+              <div className="text-center p-3 bg-amber-50 rounded-xl border border-amber-200">
+                <p className="text-sm font-bold text-amber-700">
+                  あなたのTOP1: <span className="text-lg">「{top1Card.keyword}」</span>
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-between items-center no-print">
+            <button
+              onClick={() => update({ phase2Selected: [], phase3Selected: null })}
+              className="btn-secondary"
+            >
+              ← 3枚選びに戻る
+            </button>
+            <button
+              disabled={p3 === null}
+              onClick={() => {/* uiPhase auto-advances when p3 !== null */}}
+              className="btn-primary"
+              style={{ display: p3 === null ? 'inline-flex' : 'none' }}
+            >
+              次へ
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* ── Episodes + reflection phase ── */}
+      {uiPhase === 'episodes' && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.2 }}
+        >
+          {/* TOP1 summary */}
+          {top1Card && (
+            <div className="card-base p-4 mb-5 bg-amber-50 border-amber-200 text-center">
+              <p className="text-xs font-semibold text-amber-600 mb-1">あなたのTOP1価値観</p>
+              <p className="text-2xl font-extrabold text-amber-800">「{top1Card.keyword}」</p>
+            </div>
+          )}
+
+          {/* Episode forms for TOP3 */}
+          {top3Cards.length > 0 && (
+            <div className="card-base p-5 mb-5">
+              <h3 className="section-title">TOP3の価値観について教えてください</h3>
+              <div className="space-y-6">
+                {top3Cards.map((card, i) => (
+                  <div key={card.id} className="border border-gray-100 rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      {card.id === p3 && (
+                        <span className="bg-amber-500 text-white text-xs font-black px-2 py-0.5 rounded-full">
+                          TOP1
+                        </span>
+                      )}
+                      <span className="font-extrabold text-gray-800">「{card.keyword}」</span>
+                      <span className="text-sm text-gray-400">（第{i + 1}位）</span>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="label-text text-xs">具体的なエピソード・経験</label>
+                        <textarea
+                          rows={2}
+                          className="textarea-base"
+                          placeholder={`「${card.keyword}」を大切にした経験、感じた瞬間は？`}
+                          value={episodes[card.id]?.episode || ''}
+                          onChange={e => updateEpisode(card.id, 'episode', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="label-text text-xs">そのとき感じたこと・大切だと思ったこと</label>
+                        <textarea
+                          rows={2}
+                          className="textarea-base"
+                          placeholder="どんな気持ちでしたか？なぜ大切だと気づきましたか？"
+                          value={episodes[card.id]?.feeling || ''}
+                          onChange={e => updateEpisode(card.id, 'feeling', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Reverse reflection */}
+          <div className="card-base p-5 mb-5">
+            <h3 className="section-title">「興味がない」の裏返し内省</h3>
+            <label className="label-text">
+              Step 1で「興味がない」に分類したカードを振り返って、見えてきたことはありますか？
+              <span className="text-gray-400 font-normal text-xs ml-1">（大切にしていることの裏返し）</span>
+            </label>
+            <textarea
+              rows={3}
+              className="textarea-base"
+              placeholder="例：「一人でコツコツ作業する職業」を選ばなかったのは、人と関わることへの強い欲求の表れかもしれない…"
+              value={state.step2Reflection}
+              onChange={e => update({ step2Reflection: e.target.value })}
+            />
+          </div>
+
+          <div className="flex justify-between items-center no-print">
+            <button
+              onClick={() => update({ phase3Selected: null })}
+              className="btn-secondary"
+            >
+              ← TOP1選択に戻る
+            </button>
+            <button onClick={onNext} className="btn-primary">
+              Step 3 へ →
+            </button>
+          </div>
+        </motion.div>
+      )}
 
       {/* Reset sorting button */}
       {isDone && uiPhase !== 'sorting' && (

@@ -82,9 +82,6 @@ function DragCard({ card, onSort }: DragCardProps) {
       {/* Card face */}
       <div className="w-72 h-96 sm:w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 flex flex-col items-center justify-center p-8 gap-4">
         <div className="text-6xl">{card.emoji}</div>
-        <span className={`px-3 py-1 rounded-full text-xs font-black border ${RIASEC_BADGE_COLORS[card.type]}`}>
-          {card.type}型
-        </span>
         <h3 className="text-xl font-extrabold text-gray-800 text-center leading-tight">{card.title}</h3>
         <p className="text-sm text-gray-500 text-center leading-relaxed">{card.description}</p>
       </div>

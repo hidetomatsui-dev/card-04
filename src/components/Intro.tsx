@@ -71,6 +71,19 @@ export default function Intro({ state, update, onNext }: Props) {
         ))}
       </motion.div>
 
+      {/* Privacy notice */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.25 }}
+        className="p-4 mb-6 bg-sky-50 border border-sky-100 rounded-xl"
+      >
+        <p className="text-xs text-gray-500 leading-relaxed">
+          <span className="font-semibold text-sky-700">📊 データ利用について</span>
+          このワークショップでは、結果をエクスポートする際に、個人を特定しない形で集計データ（職業興味のタイプ・価値観のキーワードなど）をサービス改善のために運営者に自動送信する場合があります。氏名・メールアドレスなど個人を特定できる情報は送信されません。
+        </p>
+      </motion.div>
+
       {/* Name input */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
