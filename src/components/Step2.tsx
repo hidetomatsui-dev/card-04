@@ -485,7 +485,6 @@ export default function Step2({ state, update, onNext, onBack }: Props) {
                         </span>
                       )}
                       <span className="font-extrabold text-gray-800">「{card.keyword}」</span>
-                      <span className="text-sm text-gray-400">（第{i + 1}位）</span>
                     </div>
                     <div className="space-y-3">
                       <div>
