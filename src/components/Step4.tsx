@@ -71,7 +71,7 @@ export default function Step4({ state, update, onBack }: Props) {
         <div className="card-base p-6">
           <h3 className="section-title">キャリアの方向性</h3>
           <label className="label-text">
-            今日の気づきをもとに、興味を持ったキャリアの方向性を書いてください
+            これまでの気づきをもとに、"自分らしいキャリアの方向性"を短い文にまとめてください
           </label>
           <textarea
             rows={4}
@@ -86,7 +86,7 @@ export default function Step4({ state, update, onBack }: Props) {
         <div className="card-base p-6">
           <h3 className="section-title">24時間以内のスモールステップ</h3>
           <p className="text-sm text-gray-500 mb-4">
-            「明日からできること」を3つ書いてください。小さなことで十分です。
+            自分らしいキャリアのためにすぐにできることを3つ書いてください。小さなことで十分です。
           </p>
 
           <div className="space-y-3">

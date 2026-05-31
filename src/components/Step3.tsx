@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { AppState, RIASECType } from '../types';
 import { RIASEC_TEXT_COLORS, RIASEC_BADGE_COLORS } from '../types';
 import { valueCards } from '../data/valueCards';
+import { ohbyCards } from '../data/ohbyCards';
 
 interface Props {
   state: AppState;
@@ -162,12 +163,20 @@ export default function Step3({ state, update, onNext, onBack }: Props) {
   const top3Cards = valueCards.filter(c => top3Ids.includes(c.id));
   const hasTop3 = top3Cards.length > 0;
 
+  // Compute top-3 RIASEC types by count (from user's "interested" sort results)
+  const riasecCounts: Record<RIASECType, number> = { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
+  ohbyCards.forEach(c => {
+    if (state.cardSortResults[c.id] === 'interested') riasecCounts[c.type]++;
+  });
+  const sortedRiasec = [...state.riasecChecked].sort((a, b) => riasecCounts[b] - riasecCounts[a]);
+  const matrixTypes: RIASECType[] = sortedRiasec.length > 0 ? sortedRiasec.slice(0, 3) : RIASEC_TYPES;
+
   const saveCell = (key: string, value: string) => {
     update({ matrixData: { ...state.matrixData, [key]: value } });
   };
 
   const filledCells = Object.values(state.matrixData).filter(v => v.trim().length > 0).length;
-  const totalCells = top3Cards.length * 6;
+  const totalCells = top3Cards.length * matrixTypes.length;
 
   return (
     <div>
@@ -216,7 +225,7 @@ export default function Step3({ state, update, onNext, onBack }: Props) {
                     <th className="p-3 bg-gray-50 border border-gray-200 text-gray-500 text-xs font-semibold min-w-[90px] sticky left-0 z-10">
                       価値観 ＼ タイプ
                     </th>
-                    {RIASEC_TYPES.map(t => (
+                    {matrixTypes.map(t => (
                       <th key={t} className="p-3 bg-gray-50 border border-gray-200 min-w-[120px]">
                         <span className={`font-extrabold text-sm ${RIASEC_TEXT_COLORS[t]}`}>{t}型</span>
                         <div className="text-xs text-gray-400 font-normal mt-0.5">{RIASEC_DESC[t]}</div>
@@ -235,7 +244,7 @@ export default function Step3({ state, update, onNext, onBack }: Props) {
                           <span className="block text-center text-[10px] font-bold text-amber-600 mt-1">★TOP1</span>
                         )}
                       </td>
-                      {RIASEC_TYPES.map(t => {
+                      {matrixTypes.map(t => {
                         const key = `${vCard.id}-${t}`;
                         const text = state.matrixData[key] || '';
                         return (
