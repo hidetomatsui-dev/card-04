@@ -109,15 +109,15 @@ export default function App() {
         className="no-print"
       />
 
-      <main className="max-w-4xl mx-auto pt-28 pb-20 px-4">
-        <AnimatePresence mode="wait">
+      <main className="relative max-w-4xl mx-auto pt-28 pb-20 px-4">
+        <AnimatePresence mode="popLayout">
           <motion.div
             key={state.currentStep}
             variants={pageVariants}
             initial="enter"
             animate="center"
             exit="exit"
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            transition={{ duration: 0.25, ease: 'easeInOut' }}
           >
             {steps[state.currentStep]}
           </motion.div>
